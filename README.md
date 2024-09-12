@@ -1,7 +1,6 @@
 # Shiny Web Application for NGS B Cell Repertoire Analysis
 
-This repository contains a web application developed in R using the **Shiny** framework. The application is specifically designed for the analysis of **Next-Generation Sequencing (NGS) B cell repertoire** data, offering tools to explore, visualize, and analyze immune repertoire datasets, with a focus on **gene usage PCA visualizations**.
-
+This repository contains a web application developed in R using the **Shiny** framework. The application is specifically designed for the analysis of **Next-Generation Sequencing (NGS) B cell repertoire** data, offering tools to explore, visualize, and analyze immune repertoire datasets
 ## Features
 
 - Interactive analysis of NGS B cell repertoire data
