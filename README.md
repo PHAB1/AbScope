@@ -5,7 +5,7 @@ This repository contains a web application developed in R using the **Shiny** fr
 
 - Interactive analysis of NGS B cell repertoire data
 - **Principal Component Analysis (PCA) visualizations** for gene usage, allowing users to explore V(D)J gene segment patterns
-- Tools for dimensionality reduction (e.g., t-SNE) and clustering
+- Tools for dimensionality reduction (e.g., t-SNE) and clustering of antibodyes by CDR3 similarity
 - Network analysis of B cell clones
 - 3D visualizations and advanced plotting
 - Summary statistics and data tables for repertoire analysis
