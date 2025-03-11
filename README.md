@@ -45,28 +45,25 @@ To use these functions, ensure you have the following:
     "plot3D", 
     "MHTdiscrete"
   ))
-Functions Overview
-Data Preprocessing
-load_data: Load and preprocess phage display data from AIRR-compatible files.
 
-data_summary: Summarize sequence frequencies and calculate standard errors.
+## Functions Overview
 
-Gene Usage Analysis
-generate_vdj_usage_plot: Visualize V(D)J gene usage patterns.
+### Data Preprocessing
+- **`load_data`**: Load and preprocess phage display data from AIRR-compatible files.
+- **`data_summary`**: Summarize sequence frequencies and calculate standard errors.
 
-generate_pca_plot: Perform PCA to analyze gene usage trends.
+### Gene Usage Analysis
+- **`generate_vdj_usage_plot`**: Visualize V(D)J gene usage patterns.
+- **`generate_pca_plot`**: Perform PCA to analyze gene usage trends.
 
-Clonal Diversity and Abundance
-generate_abundance_plot: Generate abundance curves for antibody sequences.
+### Clonal Diversity and Abundance
+- **`generate_abundance_plot`**: Generate abundance curves for antibody sequences.
+- **`generate_diversity_plot`**: Calculate and visualize clonal diversity.
 
-generate_diversity_plot: Calculate and visualize clonal diversity.
+### Sequence Similarity and Clustering
+- **`generate_tsne_plot`**: Perform t-SNE for clustering antibody sequences by similarity.
+- **`generate_network_plot`**: Create network graphs to analyze relationships between antibody clones.
 
-Sequence Similarity and Clustering
-generate_tsne_plot: Perform t-SNE for clustering antibody sequences by similarity.
-
-generate_network_plot: Create network graphs to analyze relationships between antibody clones.
-
-Statistical Analysis
-generate_statistics_table: Generate summary statistics for gene usage.
-
-generate_combinatorial_statistics_table: Analyze combinatorial patterns in V(D)J gene usage.
+### Statistical Analysis
+- **`generate_statistics_table`**: Generate summary statistics for gene usage.
+- **`generate_combinatorial_statistics_table`**: Analyze combinatorial patterns in V(D)J gene usage.
