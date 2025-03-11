@@ -1,4 +1,4 @@
-# Carregar bibliotecas necessárias
+# Load necessary libraries
 load_libraries <- function() {
   suppressWarnings(library(shiny))
   suppressWarnings(library(cowplot))
@@ -28,7 +28,7 @@ load_libraries <- function() {
   suppressWarnings(library(shinyjs))
 }
 
-# Função para resumir dados
+# Function to summarize data
 data_summary <- function(data, varname, groupnames) {
   data_sum <- data %>% 
     group_by(subject_id, gene) %>%
@@ -38,19 +38,19 @@ data_summary <- function(data, varname, groupnames) {
   return(data_sum)
 }
 
-# Função para transformar dados em estatísticas
-df2stat <- function(df, colSamples, colValues, colType, controlPattern, TratPattern, colSubType = FALSE) {
+# Function to transform data into statistics
+df2stat <- function(df, colSamples, colValues, colType, controlPattern, treatmentPattern, colSubType = FALSE) {
   df <- select(df, colSamples, colValues, colType)
   df$seq_freq <- df$seq_freq * 10000
   df <- df %>% 
     spread(key = colSamples, value = colValues) %>%
     mutate_all(~ifelse(is.na(.), 1, .))
 
-  df$log2FoldChange <- log2((meanByPatter(df, TratPattern) / (meanByPatter(df, controlPattern))))
+  df$log2FoldChange <- log2((meanByPattern(df, treatmentPattern) / (meanByPattern(df, controlPattern))))
   
   df <- df %>%
     rowwise() %>%
-    mutate(p_value = wilcox.test(c_across(contains(TratPattern)), c_across(contains(controlPattern)), paired = F)$p.value)
+    mutate(p_value = wilcox.test(c_across(contains(treatmentPattern)), c_across(contains(controlPattern)), paired = F)$p.value)
   
   df$p_adjusted <- p.adjust(df$p_value, method = "BH")
   df <- df %>% mutate_if(is.numeric, ~ round(., 2))
@@ -62,21 +62,21 @@ df2stat <- function(df, colSamples, colValues, colType, controlPattern, TratPatt
   })
 }
 
-# Função para calcular a média por padrão
-meanByPatter <- function(df, pattern) {                          
+# Function to calculate mean by pattern
+meanByPattern <- function(df, pattern) {                          
   combined_pattern <- paste(pattern, collapse = "|")
   return(rowMeans(df[, grep(combined_pattern, colnames(df))]))
 }
 
-# Função para criar cores a partir de uma coluna
-coll_names <- function(column) {
+# Function to create colors from a column
+create_colors <- function(column) {
   qual_col_pals <- brewer.pal.info[brewer.pal.info$category == 'qual', ]
   col_vector <- unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
-  name2collor <- data.frame(subject_id = unique(column), collors = col_vector[0:length(unique(column))])
-  return(merge(data.frame(subject_id = column), name2collor))
+  name_to_color <- data.frame(subject_id = unique(column), colors = col_vector[0:length(unique(column))])
+  return(merge(data.frame(subject_id = column), name_to_color))
 }
 
-# Função para carregar dados
+# Function to load data
 load_data <- function(file_paths, perMaxSample) {
   df <- NULL
   for (f in file_paths) {
@@ -104,25 +104,25 @@ load_data <- function(file_paths, perMaxSample) {
     mutate(cprimer = sub("_.*", "", cprimer)) %>%
     mutate(across(c(duplicate_count, seq_len, clone_size_count, clone_size_freq), as.numeric))
 
-  n_amostras <- df %>%
+  n_samples <- df %>%
     count(sample_id) %>%
     summarise(max_n = max(n)) %>%
     pull(max_n) * (perMaxSample / 100)
   
-  n_amostras <- round(n_amostras)
+  n_samples <- round(n_samples)
   
   df <- df %>%
     group_by(sample_id) %>%
     group_modify(~ {
       n_group <- nrow(.x)
-      .x %>% slice_sample(n = min(n_group, n_amostras), weight_by = duplicate_count)
+      .x %>% slice_sample(n = min(n_group, n_samples), weight_by = duplicate_count)
     }) %>%
     ungroup()
   
   return(df)
 }
 
-# Função para gerar gráficos de PCA
+# Function to generate PCA plots
 generate_pca_plot <- function(df, colorBy) {
   df <- df %>%
     select(sample_id, c_call, j_call, d_call, v_call) %>% 
@@ -144,7 +144,7 @@ generate_pca_plot <- function(df, colorBy) {
   eig_perc <- (pca_res$sdev^2 / sum(pca_res$sdev^2) * 100) %>% round(2)
   
   open3d(useNULL = T)
-  plot3d(as.data.frame(pca_res$x[, 1:3]), size = 8, radius = 100, type = "s", col = df_tags$collors, box = FALSE, xlab = paste0("PC1 ", eig_perc[1]), ylab = paste0("PC2 ", eig_perc[2]), zlab = paste0("PC3 ", eig_perc[3]))
+  plot3d(as.data.frame(pca_res$x[, 1:3]), size = 8, radius = 100, type = "s", col = df_tags$colors, box = FALSE, xlab = paste0("PC1 ", eig_perc[1]), ylab = paste0("PC2 ", eig_perc[2]), zlab = paste0("PC3 ", eig_perc[3]))
   if (colorBy == "subject_id") {
     text3d(as.data.frame(pca_res$x[, 1:3]), texts = c(df_tags$subject_id), cex = 0.7, pos = 3)
   } else {
@@ -153,7 +153,7 @@ generate_pca_plot <- function(df, colorBy) {
   rglwidget()
 }
 
-# Função para gerar gráficos de t-SNE
+# Function to generate t-SNE plots
 generate_tsne_plot <- function(df, colorBy, perplexity) {
   subsample <- function(data, column, n) {
     data %>%
@@ -162,62 +162,62 @@ generate_tsne_plot <- function(df, colorBy, perplexity) {
       ungroup()
   }
 
-  bcr.subset <- subsample(df, colorBy, 1000)
-  a <- bcr.subset$junction_aa
-  b <- bcr.subset$junction_aa
+  bcr_subset <- subsample(df, colorBy, 1000)
+  a <- bcr_subset$junction_aa
+  b <- bcr_subset$junction_aa
 
-  s.dist.hamming <- stringdistmatrix(a, b, method = "h", useNames = "string")
-  s.dist.leveshtein <- stringdistmatrix(a, b, method = "lv", useNames = "string")
-  s.dist <- cbind(s.dist.hamming, s.dist.leveshtein)
-  s.dist[is.infinite(s.dist)] <- 0
+  s_dist_hamming <- stringdistmatrix(a, b, method = "h", useNames = "string")
+  s_dist_leveshtein <- stringdistmatrix(a, b, method = "lv", useNames = "string")
+  s_dist <- cbind(s_dist_hamming, s_dist_leveshtein)
+  s_dist[is.infinite(s_dist)] <- 0
 
-  tsne_results <- Rtsne(as.matrix(s.dist), perplexity = perplexity, check_duplicates = FALSE, dims = 2)
+  tsne_results <- Rtsne(as.matrix(s_dist), perplexity = perplexity, check_duplicates = FALSE, dims = 2)
   if (colorBy == "subject_id") {
-    TsnePlot <- plot_ly(x = tsne_results$Y[, 1], y = tsne_results$Y[, 2], type = 'scatter', color = as.factor(bcr.subset$subject_id), text = as.factor(bcr.subset$junction_aa), mode = "markers")
+    tsne_plot <- plot_ly(x = tsne_results$Y[, 1], y = tsne_results$Y[, 2], type = 'scatter', color = as.factor(bcr_subset$subject_id), text = as.factor(bcr_subset$junction_aa), mode = "markers")
   } else {
-    TsnePlot <- plot_ly(x = tsne_results$Y[, 1], y = tsne_results$Y[, 2], type = 'scatter', color = as.factor(bcr.subset$sample_id), text = as.factor(bcr.subset$junction_aa), mode = "markers")
+    tsne_plot <- plot_ly(x = tsne_results$Y[, 1], y = tsne_results$Y[, 2], type = 'scatter', color = as.factor(bcr_subset$sample_id), text = as.factor(bcr_subset$junction_aa), mode = "markers")
   }
-  TsnePlot
+  tsne_plot
 }
 
-# Função para gerar gráficos de rede
+# Function to generate network plots
 generate_network_plot <- function(df, nSample, subject) {
-  bcr.subset <- df %>%
+  bcr_subset <- df %>%
     group_by(subject_id) %>%
     sample_n(size = nSample, replace = FALSE)
 
-  a <- bcr.subset$junction_aa
-  b <- bcr.subset$junction_aa
+  a <- bcr_subset$junction_aa
+  b <- bcr_subset$junction_aa
 
-  s.dist <- stringdistmatrix(a, b, method = "h", useNames = "string")
-  s.dist[s.dist < 2] <- 1
-  s.dist[s.dist >= 2] <- 0
+  s_dist <- stringdistmatrix(a, b, method = "h", useNames = "string")
+  s_dist[s_dist < 2] <- 1
+  s_dist[s_dist >= 2] <- 0
 
-  network <- graph_from_adjacency_matrix(s.dist, mode = "undirected", weighted = T, diag = F)
+  network <- graph_from_adjacency_matrix(s_dist, mode = "undirected", weighted = T, diag = F)
   plot.igraph(network, vertex.size = 1.5, vertex.color = "grey", main = subject, edge.color = "orange", vertex.label = NA, edge.arrow.size = .1, layout = layout.fruchterman.reingold(network, niter = 1000))
 }
 
-# Função para gerar gráficos de abundância
+# Function to generate abundance plots
 generate_abundance_plot <- function(df, plotBy) {
   curve <- estimateAbundance(df, group = plotBy, ci = 0.95, nboot = 100, clone = "clone_id")
-  abuCurvePlot <- plot(curve, legend_title = "", main = "Abundance Plot") + theme(plot.title = element_text(size = 20), axis.title = element_text(size = 30), axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20)) + theme_classic()
-  abuCurvePlot_plotly <- ggplotly(abuCurvePlot)
-  abuCurvePlot_plotly
+  abundance_plot <- plot(curve, legend_title = "", main = "Abundance Plot") + theme(plot.title = element_text(size = 20), axis.title = element_text(size = 30), axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20)) + theme_classic()
+  abundance_plot_plotly <- ggplotly(abundance_plot)
+  abundance_plot_plotly
 }
 
-# Função para gerar gráficos de diversidade
+# Function to generate diversity plots
 generate_diversity_plot <- function(df, plotBy) {
   abund <- estimateAbundance(df, group = plotBy, nboot = 100)
   div <- alphaDiversity(abund, max_q = 6)
-  divCurvePlot <- plotDiversityCurve(div, legend_title = "") + theme(plot.title = element_text(size = 20), axis.title = element_text(size = 30), axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20)) + theme_classic()
-  divCurvePlot
+  diversity_plot <- plotDiversityCurve(div, legend_title = "") + theme(plot.title = element_text(size = 20), axis.title = element_text(size = 30), axis.text.x = element_text(size = 20), axis.text.y = element_text(size = 20)) + theme_classic()
+  diversity_plot
 }
 
-# Função para gerar gráficos de uso de VDJ
-generate_vdj_usage_plot <- function(df, plotBy, CVDJ_type_usage, modeFG_usage) {
-  df <- countGenes(df, gene = CVDJ_type_usage, groups = plotBy, mode = modeFG_usage)
+# Function to generate VDJ usage plots
+generate_vdj_usage_plot <- function(df, plotBy, cvdj_type_usage, mode_fg_usage) {
+  df <- countGenes(df, gene = cvdj_type_usage, groups = plotBy, mode = mode_fg_usage)
   df$seq_freq <- df$seq_freq * 100
-  vdjBarplot_g1 <- ggplot(df, aes_string(x = "gene", y = "seq_freq", fill = plotBy)) +
+  vdj_usage_plot <- ggplot(df, aes_string(x = "gene", y = "seq_freq", fill = plotBy)) +
     theme_bw() +
     ggtitle("IGH-V-D-J Usage") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
@@ -225,50 +225,50 @@ generate_vdj_usage_plot <- function(df, plotBy, CVDJ_type_usage, modeFG_usage) {
     xlab("") +
     scale_y_continuous(labels = scales::percent_format(scale = 1)) +
     geom_bar(stat = "identity", position = "dodge", width = 0.7)
-  plotly::ggplotly(vdjBarplot_g1)
+  plotly::ggplotly(vdj_usage_plot)
 }
 
-# Função para gerar gráficos de comprimento de CDR3
-generate_cdr3_length_plot <- function(df, plotBy_usage_AbLen, min_group_perCent) {
+# Function to generate CDR3 length plots
+generate_cdr3_length_plot <- function(df, plotBy_usage_ablen, min_group_percent) {
   db_props <- aminoAcidProperties(df, seq = "junction", trim = TRUE, label = "cdr3")
-  pros_rm <- db_props %>% 
+  props_rm <- db_props %>% 
     count(subject_id, sample_id, c_call) %>%
     group_by(sample_id) %>%
     mutate(c_freq = n / sum(n)) %>%
     ungroup() %>%
-    filter(c_freq > as.numeric(min_group_perCent / 100))
+    filter(c_freq > as.numeric(min_group_percent / 100))
   
-  db_props <- semi_join(db_props, pros_rm, by = c("sample_id", "c_call"))
+  db_props <- semi_join(db_props, props_rm, by = c("sample_id", "c_call"))
   
   tmp_theme <- theme_bw() + theme(legend.position = "bottom")
   
   g1 <- ggplot(db_props, aes(x = c_call, y = cdr3_aa_length)) + tmp_theme +
     ggtitle("CDR3 length") + 
     xlab("Isotype") + ylab("Amino acids") +
-    geom_boxplot(aes_string(fill = plotBy_usage_AbLen))
+    geom_boxplot(aes_string(fill = plotBy_usage_ablen))
   
   g2 <- ggplot(db_props, aes(x = c_call, y = cdr3_aa_gravy)) + tmp_theme + 
     ggtitle("CDR3 hydrophobicity") + 
     xlab("Isotype") + ylab("GRAVY") +
-    geom_boxplot(aes_string(fill = plotBy_usage_AbLen))
+    geom_boxplot(aes_string(fill = plotBy_usage_ablen))
   
   gridPlot(g1, g2, ncol = 1)
 }
 
-# Função para gerar tabelas de estatísticas
-generate_statistics_table <- function(df, ctrl, trat, CVDJ_type, modeFG) {
-  tratSamples <- unique(filter(df, subject_id == trat)$sample_id)
-  controlSamples <- unique(filter(df, subject_id == ctrl)$sample_id)
+# Function to generate statistics tables
+generate_statistics_table <- function(df, control, treatment, cvdj_type, mode_fg) {
+  treatment_samples <- unique(filter(df, subject_id == treatment)$sample_id)
+  control_samples <- unique(filter(df, subject_id == control)$sample_id)
   
-  family_gene <- countGenes(df, gene = CVDJ_type, groups = c("sample_id"), mode = modeFG)
-  finalSt_df <- df2stat(family_gene, "sample_id", "seq_freq", "gene", controlSamples, tratSamples)
+  family_gene <- countGenes(df, gene = cvdj_type, groups = c("sample_id"), mode = mode_fg)
+  final_stat_df <- df2stat(family_gene, "sample_id", "seq_freq", "gene", control_samples, treatment_samples)
   
-  finalSt_df
+  final_stat_df
 }
 
-# Função para gerar tabelas de estatísticas combinatórias
-generate_combinatory_statistics_table <- function(df, ctrl, trat) {
-  combinatory_list <- list(
+# Function to generate combinatorial statistics tables
+generate_combinatorial_statistics_table <- function(df, control, treatment) {
+  combinatorial_list <- list(
     list("c_call", "v_call"),
     list("c_call", "d_call"),
     list("c_call", "j_call"),
@@ -277,36 +277,36 @@ generate_combinatory_statistics_table <- function(df, ctrl, trat) {
     list("d_call", "v_call")  
   )
   
-  finalSt_df <- NULL
+  final_stat_df <- NULL
   
-  tratSamples <- unique(filter(df, subject_id == trat)$sample_id)
-  controlSamples <- unique(filter(df, subject_id == ctrl)$sample_id)
+  treatment_samples <- unique(filter(df, subject_id == treatment)$sample_id)
+  control_samples <- unique(filter(df, subject_id == control)$sample_id)
   
-  for (i in 1:length(combinatory_list)) {
-    col_up <- unlist(combinatory_list[[i]][1])
-    col_down <- unlist(combinatory_list[[i]][2])
+  for (i in 1:length(combinatorial_list)) {
+    col_up <- unlist(combinatorial_list[[i]][1])
+    col_down <- unlist(combinatorial_list[[i]][2])
     subset_vdj <- countGenes(df, gene = col_up, groups = c("sample_id", col_down), copy = "duplicate_count", mode = "gene")
     
-    teste <- df2stat(subset_vdj, "sample_id", "seq_freq", "gene", controlSamples, tratSamples, col_down)
+    test <- df2stat(subset_vdj, "sample_id", "seq_freq", "gene", control_samples, treatment_samples, col_down)
     
-    colnames(teste)[1] <- "upStream"
-    colnames(teste)[4] <- "downStream"
-    teste <- select(teste, "upStream", "downStream", everything())
+    colnames(test)[1] <- "upStream"
+    colnames(test)[4] <- "downStream"
+    test <- select(test, "upStream", "downStream", everything())
     
-    finalSt_df <- tryCatch(
+    final_stat_df <- tryCatch(
       expr = {
-        finalSt_df <- rbind(finalSt_df, teste)
+        final_stat_df <- rbind(final_stat_df, test)
       },
       error = function(e) {
-        finalSt_df <- teste
+        final_stat_df <- test
       }
     )
   }
   
-  finalSt_df
+  final_stat_df
 }
 
-# Função para gerar tabelas de interseção de CDR3
+# Function to generate CDR3 intersection tables
 generate_intersection_table <- function(df, db, cdr3_field) {
   df <- df %>%
     group_by(sample_id, v_call, d_call, j_call, junction_aa) %>%
@@ -317,19 +317,19 @@ generate_intersection_table <- function(df, db, cdr3_field) {
     as.data.frame(.) %>%
     mutate(junction_aa = substr(junction_aa, 2, as.integer(nchar(junction_aa)) - 1))
   
-  merged_by_hamm <- data.frame()
+  merged_by_hamming <- data.frame()
   for (i in 1:nrow(db)) {
     for (j in 1:nrow(df)) {
       if ((nchar(db[cdr3_field][i, ]) != nchar(df["junction_aa"][j, ])) | !(grepl(df["v_call"][j, ], db["Heavy.V.Gene"][i, ]))) {
         next
       }
-      hamm_dist <- sum(strsplit(db[cdr3_field][i, ], NULL)[[1]] != strsplit(df["junction_aa"][j, ], NULL)[[1]])
-      if (hamm_dist < 4) {
+      hamming_dist <- sum(strsplit(db[cdr3_field][i, ], NULL)[[1]] != strsplit(df["junction_aa"][j, ], NULL)[[1]])
+      if (hamming_dist < 4) {
         new_row <- cbind(db[i, ], df[j, ])
-        merged_by_hamm <- rbind(merged_by_hamm, new_row)
+        merged_by_hamming <- rbind(merged_by_hamming, new_row)
       }
     }
   }
   
-  merged_by_hamm
+  merged_by_hamming
 }
